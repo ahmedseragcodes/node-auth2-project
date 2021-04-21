@@ -55,7 +55,7 @@ function findBy(filter) {
     return db("users as u")
     .join("roles as r", "u.role_id", "r.role_id")
     .select("u.user_id", "u.username", "u.password", "r.role_name")
-    .where(filter)
+    .where("u.username", filter)
 }
 
 function findById(user_id) {
