@@ -4,6 +4,7 @@ const Users = require("../users/users-model");
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const { buildToken } = require("./tokenBuilder");
 
 router.post("/register", validateRoleName, (req, res, next) => {
   /**
@@ -60,6 +61,23 @@ router.post("/login", checkUsernameExists, (req, res, next) => {
       "role_name": "admin" // the role of the authenticated user
     }
    */
+
+    const { username, password } = req.body;
+
+    Users.findBy({ username })
+    .then(([specificUser])=>{
+      if(specificUser && bcrypt.compareSync(password, specificUser.password)){
+        const token = buildToken(specificUser)
+        res.status(200).json({
+          message: `Welcome back ${specificUser.username}`,
+          token,
+        })
+      }
+    })
+    .catch((err)=>{
+      res.status(500).json({message: err.message});
+    })
+
 });
 
 module.exports = router;
