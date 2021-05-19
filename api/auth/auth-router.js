@@ -1,6 +1,10 @@
 const router = require("express").Router();
 const { checkUsernameExists, validateRoleName } = require('./auth-middleware');
+const Users = require("../users/users-model");
 const { JWT_SECRET } = require("../secrets"); // use this secret!
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const { buildToken } = require("./tokenBuilder");
 
 router.post("/register", validateRoleName, (req, res, next) => {
   /**
@@ -14,6 +18,26 @@ router.post("/register", validateRoleName, (req, res, next) => {
       "role_name": "angel"
     }
    */
+
+    const user = req.body;
+    const { username, password, role_name } = req.body;
+
+    const hash = bcrypt.hashSync(password, 8);
+
+    user.password = hash;
+
+    if(username && password && role_name ){
+      Users.add(user)
+      .then((addedUser)=>{
+        res.status(200).json(addedUser[0])
+      })
+      .catch((err)=>{
+        res.status(500).json({message: err.message});
+      })
+    } else {
+      res.status(400).json({message: "username, body, and role required"});
+    }
+
 });
 
 
@@ -37,6 +61,23 @@ router.post("/login", checkUsernameExists, (req, res, next) => {
       "role_name": "admin" // the role of the authenticated user
     }
    */
+
+    const { username, password } = req.body;
+
+    Users.findBy({ username })
+    .then(([specificUser])=>{
+      if(specificUser && bcrypt.compareSync(password, specificUser.password)){
+        const token = buildToken(specificUser)
+        res.status(200).json({
+          message: `Welcome back ${specificUser.username}`,
+          token,
+        })
+      }
+    })
+    .catch((err)=>{
+      res.status(500).json({message: err.message});
+    })
+
 });
 
 module.exports = router;
